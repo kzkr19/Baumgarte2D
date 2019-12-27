@@ -16,7 +16,7 @@ class BlockObject:
         # 記号の定義
         self.__sym_x = sympy.symbols("x_{%d}" % object_id)
         self.__sym_y = sympy.symbols("y_{%d}" % object_id)
-        self.__sym_theta = sympy.symbols("\theta_{%d}" % object_id)
+        self.__sym_theta = sympy.symbols("\\theta_{%d}" % object_id)
         self.__sym_m = sympy.symbols("m_{%d}" % object_id)
         self.__sym_j = sympy.symbols("J_{%d}" % object_id)
 
