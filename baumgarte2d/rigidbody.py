@@ -69,6 +69,12 @@ class RigidBody:
     def force_all(self) -> sympy.Matrix:
         return self.__force_all
 
+    def add_force(self, force: sympy.Matrix):
+        """
+        外力を追加するメソッド
+        """
+        self.__force_all += force
+
     def convert_point(self, point0: sympy.Matrix, to_global=True) -> sympy.Matrix:
         """
         to_globalがTrueならローカル座標系の点をグローバル座標系の点にするメソッド
