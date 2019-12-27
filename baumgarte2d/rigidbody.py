@@ -54,6 +54,20 @@ class BlockObject:
     def force_all(self) -> sympy.Matrix:
         return self.__force_all
 
+    def convert_point(self, point0: sympy.Matrix, to_global=True) -> sympy.Matrix:
+        """
+        to_globalがTrueならローカル座標系の点をグローバル座標系の点にするメソッド
+        Falseならグローバル座標系の点をローカル座標系の点に変換する
+
+        point0: 変換対象の点
+        to_global: Trueならpoint0をグローバル座標へ，Falseならローカル座標系へ変換する
+        """
+
+        if to_global:
+            return self.position + self.rotation_matrix().dot(point0)
+        else:
+            return self.rotation_matrix(False).dot(point0 - self.position)
+
     def rotation_matrix(self, local_to_global=True):
         """
         回転行列を返すメソッド
