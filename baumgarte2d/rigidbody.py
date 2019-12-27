@@ -46,3 +46,18 @@ class BlockObject:
         グローバル座標から見た物体の原点
         """
         return sympy.Matrix([[self.x], [self.y]])
+
+    def rotation_matrix(self, local_to_global=True):
+        """
+        回転行列を返すメソッド
+
+        local_to_global: 
+            Trueならこのオブジェクトのローカル座標のベクトルをグローバル座標のベクトルに
+            Falseならその逆行列を返すメソッド
+        """
+        rot = sympy.Matrix([
+            [sympy.cos(self.theta), -sympy.sin(self.theta)],
+            [sympy.sin(self.theta), sympy.cos(self.theta)]
+        ])
+
+        return rot if local_to_global else rot.T
