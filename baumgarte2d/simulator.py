@@ -40,9 +40,8 @@ class Simulator:
         """
         追加された剛体の位置の変数(dx/dt, dy/dt, d\\theta/dt)のリストを返すメソッド
         """
-        t = sympy.symbols("t")
-        q = self.q
-        return [sympy.Derivative(x, t) for x in q]
+        # 速度の変数
+        return sum([[r.dot_x, r.dot_y, r.dot_theta] for r in self.__bodies], [])
 
     def calc_cq(self) -> sympy.Matrix:
         """
@@ -56,5 +55,20 @@ class Simulator:
 
         # Cq(i,j)の値を計算する関数
         def f(i, j): return sympy.diff(self.__constrains[i], self.q[j])
+
+        return sympy.Matrix(n_constrain, n_var, f)
+
+    def calc_cqdotqq(self) -> sympy.Matrix:
+        """
+        \\frac{\\partial C_q \\dot{q}}{\\partial q}を計算するメソッド
+        """
+        # 位置の変数の数
+        n_var = len(self.__bodies) * 3
+        # 制約の数
+        n_constrain = len(self.__constrains)
+
+        cq = self.calc_cq()
+        cq_dot_q = cq*sympy.Matrix([self.dot_q]).T
+        def f(i, j): return sympy.diff(cq_dot_q[i], self.q[j])
 
         return sympy.Matrix(n_constrain, n_var, f)

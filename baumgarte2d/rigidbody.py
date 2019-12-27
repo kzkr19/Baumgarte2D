@@ -17,6 +17,9 @@ class RigidBody:
         self.__sym_x = sympy.symbols("x_{%d}" % object_id)
         self.__sym_y = sympy.symbols("y_{%d}" % object_id)
         self.__sym_theta = sympy.symbols("\\theta_{%d}" % object_id)
+        self.__sym_dot_x = sympy.symbols("\\dot{x_{%d}}" % object_id)
+        self.__sym_dot_y = sympy.symbols("\\dot{y_{%d}}" % object_id)
+        self.__sym_dot_theta = sympy.symbols("\\dot{\\theta_{%d}}" % object_id)
         self.__sym_m = sympy.symbols("m_{%d}" % object_id)
         self.__sym_j = sympy.symbols("J_{%d}" % object_id)
 
@@ -34,6 +37,18 @@ class RigidBody:
     @property
     def theta(self) -> sympy.Symbol:
         return deepcopy(self.__sym_theta)
+
+    @property
+    def dot_x(self) -> sympy.Symbol:
+        return deepcopy(self.__sym_dot_x)
+
+    @property
+    def dot_y(self) -> sympy.Symbol:
+        return deepcopy(self.__sym_dot_y)
+
+    @property
+    def dot_theta(self) -> sympy.Symbol:
+        return deepcopy(self.__sym_dot_theta)
 
     @property
     def m(self) -> sympy.Symbol:
