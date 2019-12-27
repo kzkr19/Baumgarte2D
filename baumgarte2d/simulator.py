@@ -43,6 +43,9 @@ class Simulator:
         # 速度の変数
         return sum([[r.dot_x, r.dot_y, r.dot_theta] for r in self.__bodies], [])
 
+    def calc_c(self) -> sympy.Matrix:
+        return sympy.Matrix([self.__constrains]).T
+
     def calc_cq(self) -> sympy.Matrix:
         """
         拘束式 C=0 について，Cを位置変数qで偏微分した行列C_qを返すメソッド
@@ -84,3 +87,8 @@ class Simulator:
     def calc_ctt(self) -> sympy.Matrix:
         t = sympy.symbols("t")
         return sympy.diff(self.calc_cq(), t, 2)
+
+    def calc_mass(self) -> sympy.Matrix:
+        Mass = sum([[r.m, r.m, r.inertia] for r in self.__bodies], [])
+        Mass = sympy.diag(*Mass)
+        return Mass
