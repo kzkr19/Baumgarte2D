@@ -72,3 +72,15 @@ class Simulator:
         def f(i, j): return sympy.diff(cq_dot_q[i], self.q[j])
 
         return sympy.Matrix(n_constrain, n_var, f)
+
+    def calc_cqt(self) -> sympy.Matrix:
+        t = sympy.symbols("t")
+        return sympy.diff(self.calc_cq(), t)
+
+    def calc_ct(self) -> sympy.Matrix:
+        t = sympy.symbols("t")
+        return sympy.diff(self.calc_cq(), t)
+
+    def calc_ctt(self) -> sympy.Matrix:
+        t = sympy.symbols("t")
+        return sympy.diff(self.calc_cq(), t, 2)
