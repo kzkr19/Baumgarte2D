@@ -92,3 +92,23 @@ class Simulator:
         Mass = sum([[r.m, r.m, r.inertia] for r in self.__bodies], [])
         Mass = sympy.diag(*Mass)
         return Mass
+
+    def calc_force(self) -> sympy.Matrix:
+        xs = sum([[x.force_all[0], x.force_all[1], x.force_all[2]]
+                  for x in self.__bodies], [])
+        return sympy.Matrix([xs]).T
+
+    def calc_gamma(self, alpha, beta) -> sympy.Matrix:
+        dot_q = self.dot_q
+        c = self.calc_c()
+        cq = self.calc_cq()
+        ct = self.calc_ct()
+        ctt = self.calc_ctt()
+        cqt = self.calc_cqt()
+        cqdotqq = self.calc_cqdotqq()
+        gamma = -cqdotqq * dot_q
+        gamma += -2 * alpha * (cq * dot_q + ct)
+        gamma += -2 * cqt * dot_q
+        gamma += -ctt
+        gamma += -beta*beta*c
+        return gamma
