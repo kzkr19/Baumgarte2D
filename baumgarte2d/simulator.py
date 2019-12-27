@@ -112,3 +112,18 @@ class Simulator:
         gamma += -ctt
         gamma += -beta*beta*c
         return gamma
+
+    def calc_dotdotq(self, alpha, beta) -> sympy.Matrix:
+        n_body = len(self.__bodies)
+        n_constrain = len(self.__constrains)
+        cq = self.calc_cq()
+        force = self.calc_force()
+        gamma = self.calc_gamma(alpha, beta)
+        mass = self.calc_mass()
+
+        mat_left = sympy.BlockMatrix(
+            [[mass, cq.T], [cq, sympy.ZeroMatrix(n_constrain, n_body*3)]])
+        mat_right = sympy.BlockMatrix([[force], [gamma]])
+
+        result = mat_left.inv()*mat_right
+        return result[:n_body*3]
