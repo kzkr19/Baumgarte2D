@@ -20,6 +20,9 @@ class BlockObject:
         self.__sym_m = sympy.symbols("m_{%d}" % object_id)
         self.__sym_j = sympy.symbols("J_{%d}" % object_id)
 
+        # 拘束力を除く外力
+        self.__force_all = sympy.Matrix([[0], [0], [0]])
+
     @property
     def x(self) -> sympy.Symbol:
         return deepcopy(self.__sym_x)
@@ -46,6 +49,10 @@ class BlockObject:
         グローバル座標から見た物体の原点
         """
         return sympy.Matrix([[self.x], [self.y]])
+
+    @property
+    def force_all(self) -> sympy.Matrix:
+        return self.__force_all
 
     def rotation_matrix(self, local_to_global=True):
         """
