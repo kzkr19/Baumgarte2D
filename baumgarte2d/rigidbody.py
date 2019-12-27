@@ -29,6 +29,8 @@ class RigidBody:
         # 初期値
         self.__initial_position: np.ndarray = np.zeros(3)
         self.__initial_velocity: np.ndarray = np.zeros(3)
+        self.__mass: float = 1.0
+        self.__moment_of_inertia: float = 1.0
 
     @property
     def x(self) -> sympy.Symbol:
@@ -88,6 +90,22 @@ class RigidBody:
     @property.setter
     def initial_velocity(self, other: np.ndarray):
         self.__initial_velocity = other
+
+    @property.getter
+    def moment_of_inertia(self):
+        return self.__moment_of_inertia
+
+    @property.setter
+    def moment_of_inertia(self, other: float):
+        self.__moment_of_inertia = other
+
+    @property.getter
+    def mass(self):
+        return self.__mass
+
+    @property.setter
+    def mass(self, other: float):
+        self.__mass = other
 
     def add_force(self, force: sympy.Matrix):
         """
