@@ -59,7 +59,7 @@ class RigidBody:
         return deepcopy(self.__sym_m)
 
     @property
-    def inertia(self) -> sympy.Symbol:
+    def J(self) -> sympy.Symbol:
         return deepcopy(self.__sym_j)
 
     @property

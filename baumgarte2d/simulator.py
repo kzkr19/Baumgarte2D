@@ -89,7 +89,7 @@ class Simulator:
         return sympy.diff(self.calc_cq(), t, 2)
 
     def calc_mass(self) -> sympy.Matrix:
-        Mass = sum([[r.m, r.m, r.inertia] for r in self.__bodies], [])
+        Mass = sum([[r.m, r.m, r.J] for r in self.__bodies], [])
         Mass = sympy.diag(*Mass)
         return Mass
 
