@@ -26,6 +26,10 @@ class RigidBody:
         # 拘束力を除く外力
         self.__force_all = sympy.Matrix([[0], [0], [0]])
 
+        # 初期値
+        self.__initial_position: np.ndarray = np.zeros(3)
+        self.__initial_velocity: np.ndarray = np.zeros(3)
+
     @property
     def x(self) -> sympy.Symbol:
         return deepcopy(self.__sym_x)
@@ -68,6 +72,22 @@ class RigidBody:
     @property
     def force_all(self) -> sympy.Matrix:
         return self.__force_all
+
+    @property.getter
+    def initial_position(self) -> np.ndarray:
+        return self.__initial_position
+
+    @property.setter
+    def initial_position(self, other: np.ndarray):
+        self.__initial_position = other
+
+    @property.getter
+    def initial_velocity(self) -> np.ndarray:
+        return self.__initial_velocity
+
+    @property.setter
+    def initial_velocity(self, other: np.ndarray):
+        self.__initial_velocity = other
 
     def add_force(self, force: sympy.Matrix):
         """
