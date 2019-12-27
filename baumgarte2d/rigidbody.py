@@ -3,7 +3,7 @@ import sympy
 from copy import deepcopy
 
 
-class BlockObject:
+class RigidBody:
     def __init__(self, object_id: int):
         """
 
@@ -62,6 +62,9 @@ class BlockObject:
         point0: 変換対象の点
         to_global: Trueならpoint0をグローバル座標へ，Falseならローカル座標系へ変換する
         """
+
+        if isinstance(point0, sympy.Matrix) == False:
+            raise RuntimeError("point0 must be instance of sympy.Matrix.")
 
         if to_global:
             return self.position + self.rotation_matrix().dot(point0)
