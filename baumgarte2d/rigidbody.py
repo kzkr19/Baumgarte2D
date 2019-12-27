@@ -67,9 +67,9 @@ class RigidBody:
             raise RuntimeError("point0 must be instance of sympy.Matrix.")
 
         if to_global:
-            return self.position + self.rotation_matrix().dot(point0)
+            return self.position + self.rotation_matrix()*(point0)
         else:
-            return self.rotation_matrix(False).dot(point0 - self.position)
+            return self.rotation_matrix(False)*(point0 - self.position)
 
     def rotation_matrix(self, local_to_global=True):
         """
