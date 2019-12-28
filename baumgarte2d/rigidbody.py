@@ -75,37 +75,41 @@ class RigidBody:
     def force_all(self) -> sympy.Matrix:
         return self.__force_all
 
-    @property.getter
+    @property
     def initial_position(self) -> np.ndarray:
         return self.__initial_position
 
-    @property.setter
+    @initial_position.setter
     def initial_position(self, other: np.ndarray):
         self.__initial_position = other
 
-    @property.getter
+    @property
     def initial_velocity(self) -> np.ndarray:
         return self.__initial_velocity
 
-    @property.setter
+    @initial_velocity.setter
     def initial_velocity(self, other: np.ndarray):
         self.__initial_velocity = other
 
-    @property.getter
+    @property
     def moment_of_inertia(self):
         return self.__moment_of_inertia
 
-    @property.setter
+    @moment_of_inertia.setter
     def moment_of_inertia(self, other: float):
         self.__moment_of_inertia = other
 
-    @property.getter
+    @property
     def mass(self):
         return self.__mass
 
-    @property.setter
+    @mass.setter
     def mass(self, other: float):
         self.__mass = other
+
+    @property
+    def get_parameters(self):
+        return [(self.J, self.moment_of_inertia), (self.m, self.mass)]
 
     def add_force(self, force: sympy.Matrix):
         """

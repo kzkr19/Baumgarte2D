@@ -82,11 +82,11 @@ class Simulator:
 
     def calc_ct(self) -> sympy.Matrix:
         t = sympy.symbols("t")
-        return sympy.diff(self.calc_cq(), t)
+        return sympy.diff(self.calc_c(), t)
 
     def calc_ctt(self) -> sympy.Matrix:
         t = sympy.symbols("t")
-        return sympy.diff(self.calc_cq(), t, 2)
+        return sympy.diff(self.calc_c(), t, 2)
 
     def calc_mass(self) -> sympy.Matrix:
         Mass = sum([[r.m, r.m, r.J] for r in self.__bodies], [])
@@ -99,7 +99,7 @@ class Simulator:
         return sympy.Matrix([xs]).T
 
     def calc_gamma(self, alpha, beta) -> sympy.Matrix:
-        dot_q = self.dot_q
+        dot_q = sympy.Matrix([self.dot_q]).T
         c = self.calc_c()
         cq = self.calc_cq()
         ct = self.calc_ct()
