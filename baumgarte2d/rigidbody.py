@@ -1,6 +1,7 @@
 import numpy as np
 import sympy
 from copy import deepcopy
+from typing import Tuple, List
 
 
 class RigidBody:
@@ -107,8 +108,7 @@ class RigidBody:
     def mass(self, other: float):
         self.__mass = other
 
-    @property
-    def get_parameters(self):
+    def get_parameters(self) -> List[Tuple[sympy.Symbol, float]]:
         return [(self.J, self.moment_of_inertia), (self.m, self.mass)]
 
     def add_force(self, force: sympy.Matrix):
