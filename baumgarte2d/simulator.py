@@ -2,6 +2,8 @@ import numpy as np
 import sympy
 from typing import Tuple, Union, List
 from .rigidbody import RigidBody
+from functools import reduce
+from scipy.integrate import odeint
 
 
 class Simulator:
@@ -42,6 +44,18 @@ class Simulator:
         """
         # 速度の変数
         return sum([[r.dot_x, r.dot_y, r.dot_theta] for r in self.__bodies], [])
+
+    def get_body_parameters(self) -> List[Tuple[sympy.Symbol, float]]:
+        """
+        追加された剛体の定数の値を取得するメソッド
+        """
+        return sum([r.get_parameters() for r in self.__bodies], [])
+
+    def get_initial_position(self) -> np.ndarray:
+        return reduce(lambda x, y: np.r_[x, y], [r.initial_position for r in self.__bodies])
+
+    def get_initial_velocity(self) -> np.ndarray:
+        return reduce(lambda x, y: np.r_[x, y], [r.initial_velocity for r in self.__bodies])
 
     def calc_c(self) -> sympy.Matrix:
         return sympy.Matrix([self.__constrains]).T
@@ -123,7 +137,9 @@ class Simulator:
 
         mat_left = sympy.BlockMatrix(
             [[mass, cq.T], [cq, sympy.ZeroMatrix(n_constrain, n_body*3)]])
+        mat_left = sympy.Matrix(mat_left)
         mat_right = sympy.BlockMatrix([[force], [gamma]])
+        mat_right = sympy.Matrix(mat_right)
 
         result = mat_left.inv()*mat_right
-        return result[:n_body*3]
+        return result[:n_body*3, :1]
