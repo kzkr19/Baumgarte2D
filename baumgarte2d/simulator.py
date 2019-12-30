@@ -143,3 +143,38 @@ class Simulator:
 
         result = mat_left.inv()*mat_right
         return result[:n_body*3, :1]
+
+    def simulation(
+            self,
+            ts,
+            alpha: float = 10,
+            beta: float = 10,
+            parameters: List[Tuple[sympy.Symbol, float]] = None):
+        n_body = len(self.__bodies)
+        q = self.q
+        dot_q = self.dot_q
+        dotdotq = self.calc_dotdotq(alpha, beta)
+        if parameters is None:
+            parameters = []
+        parameters += self.get_body_parameters()
+
+        dotdotq = dotdotq.subs(parameters)
+        x0 = np.r_[self.get_initial_position(), self.get_initial_velocity()]
+
+        original_variables = q + dot_q
+        new_variables = [sympy.symbols("x%d" % i)
+                         for i in range(len(original_variables))]
+        dotdotq = dotdotq.subs(list(zip(original_variables, new_variables))),
+        from sympy.utilities.autowrap import autowrap
+        calc_dotdotq = autowrap(
+            dotdotq,
+            args=new_variables,
+            language="C", backend="cython")
+
+        def dxdt(x, t):
+            vel = x[n_body*3:]
+            d_vel = calc_dotdotq(*x).reshape(3*n_body)
+
+            return np.r_[vel, d_vel.astype(np.float)]
+
+        return odeint(dxdt, x0, ts)
