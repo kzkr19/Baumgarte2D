@@ -48,6 +48,54 @@ class Simulator:
         # 速度の変数
         return sum([[r.dot_x, r.dot_y, r.dot_theta] for r in self.__bodies], [])
 
+    def add_pinjoint_constrain(
+            self,
+            p1: Tuple[sympy.Expr, sympy.Expr],
+            b1: RigidBody,
+            p2: Tuple[sympy.Expr, sympy.Expr],
+            b2: RigidBody = None,
+            dumper: sympy.Expr = None,
+            spring: sympy.Expr = None):
+        """
+        剛体b1のローカル座標系の点p1と，
+        剛体b2のローカル座標系の点p2を一致拘束させる拘束を追加するメソッド．
+
+        p1: 剛体b1のローカル座標系の点
+        b1: 剛体b1
+        p2: 剛体b2のローカル座標系の点．b2=Noneの場合グローバル座標系となる
+        b2: 剛体b2．Noneの場合はp2がグローバル座標系の点となる
+        dumper: トーションダンパー係数[Ns/rad]．Noneなら無し
+        spring: トーションスプリング係数[N/rad]．Noneなら無し
+        """
+        # p1, p2をグローバル座標系にする
+        p1 = sympy.Matrix([p1]).T
+        p2 = sympy.Matrix([p2]).T
+        p1 = b1.convert_point(p1)
+        p2 = p2 if b2 is None else b2.convert_point(p2)
+
+        # 角度/角速度の差
+        delta_theta = b1.theta - (0 if b2 is None else b2.theta)
+        delta_dtheta = b1.dot_theta - (0 if b2 is None else b2.dot_theta)
+
+        # ダンピングの追加
+        if dumper is not None:
+            torque = -delta_dtheta*dumper
+            b1.add_torque(torque)
+            if b2 is not None:
+                b2.add_torque(-torque)
+
+        # バネの追加
+        if spring is not None:
+            torque = -delta_theta*spring
+            b1.add_torque(torque)
+            if b2 is not None:
+                b2.add_torque(torque)
+
+        # 制約の追加
+        constrain = p1 - p2
+        self.add_constrain(constrain[0])
+        self.add_constrain(constrain[1])
+
     def get_body_parameters(self) -> List[Tuple[sympy.Symbol, float]]:
         """
         追加された剛体の定数の値を取得するメソッド
