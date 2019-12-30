@@ -25,7 +25,9 @@ class RigidBody:
         self.__sym_j = sympy.symbols("J_{%d}" % object_id)
 
         # 拘束力を除く外力
-        self.__force_all = sympy.Matrix([[0], [0], [0]])
+        self.__fx: sympy.Expr = 0
+        self.__fy: sympy.Expr = 0
+        self.__torque: sympy.Expr = 0
 
         # 初期値
         self.__initial_position: np.ndarray = np.zeros(3)
@@ -74,7 +76,7 @@ class RigidBody:
 
     @property
     def force_all(self) -> sympy.Matrix:
-        return self.__force_all
+        return sympy.Matrix([[self.__fx, self.__fy, self.__torque]]).T
 
     @property
     def initial_position(self) -> np.ndarray:
@@ -111,11 +113,14 @@ class RigidBody:
     def get_parameters(self) -> List[Tuple[sympy.Symbol, float]]:
         return [(self.J, self.moment_of_inertia), (self.m, self.mass)]
 
-    def add_force(self, force: sympy.Matrix):
-        """
-        外力を追加するメソッド
-        """
-        self.__force_all += force
+    def add_force_x(self, fx: sympy.Expr):
+        self.__fx += fx
+
+    def add_force_y(self, fy: sympy.Expr):
+        self.__fy += fy
+
+    def add_torque(self, torque: sympy.Expr):
+        self.__torque += torque
 
     def convert_point(self, point0: sympy.Matrix, to_global=True) -> sympy.Matrix:
         """
