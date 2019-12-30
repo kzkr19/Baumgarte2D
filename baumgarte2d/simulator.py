@@ -12,6 +12,9 @@ class Simulator:
         self.__bodies: List[RigidBody] = []
 
     def add_rigidbody(self, rigidbody: RigidBody):
+        """
+        シミュレーション対象にrigidbodyを追加するメソッド
+        """
         if isinstance(rigidbody, RigidBody):
             self.__bodies.append(rigidbody)
         else:
@@ -52,12 +55,21 @@ class Simulator:
         return sum([r.get_parameters() for r in self.__bodies], [])
 
     def get_initial_position(self) -> np.ndarray:
+        """
+        全剛体の初期位置のリストを返すメソッド
+        """
         return reduce(lambda x, y: np.r_[x, y], [r.initial_position for r in self.__bodies])
 
     def get_initial_velocity(self) -> np.ndarray:
+        """
+        全剛体の初期速度のリストを返すメソッド
+        """
         return reduce(lambda x, y: np.r_[x, y], [r.initial_velocity for r in self.__bodies])
 
     def calc_c(self) -> sympy.Matrix:
+        """
+        制約条件C=0なるCを求めるメソッド
+        """
         return sympy.Matrix([self.__constrains]).T
 
     def calc_cq(self) -> sympy.Matrix:
@@ -91,28 +103,49 @@ class Simulator:
         return sympy.Matrix(n_constrain, n_var, f)
 
     def calc_cqt(self) -> sympy.Matrix:
+        """
+        C_qをtで偏微分した行列を計算するメソッド
+        """
         t = sympy.symbols("t")
         return sympy.diff(self.calc_cq(), t)
 
     def calc_ct(self) -> sympy.Matrix:
+        """
+        Cをtで偏微分した行列を計算するメソッド
+        """
         t = sympy.symbols("t")
         return sympy.diff(self.calc_c(), t)
 
     def calc_ctt(self) -> sympy.Matrix:
+        """
+        Cをtで2回偏微分した行列を計算するメソッド
+        """
         t = sympy.symbols("t")
         return sympy.diff(self.calc_c(), t, 2)
 
     def calc_mass(self) -> sympy.Matrix:
+        """
+        質量マトリクスを計算するメソッド
+        """
         Mass = sum([[r.m, r.m, r.J] for r in self.__bodies], [])
         Mass = sympy.diag(*Mass)
         return Mass
 
     def calc_force(self) -> sympy.Matrix:
+        """
+        各剛体にかかる外力をまとめたベクトルを計算するメソッド
+        """
         xs = sum([[x.force_all[0], x.force_all[1], x.force_all[2]]
                   for x in self.__bodies], [])
         return sympy.Matrix([xs]).T
 
-    def calc_gamma(self, alpha, beta) -> sympy.Matrix:
+    def calc_gamma(self, alpha: float = 10, beta: float = 10) -> sympy.Matrix:
+        """
+        制約を常に満たすような拘束力を計算するメソッド
+
+        alpha: バウムガルテの安定化法の減衰係数
+        beta: バウムガルテの安定化法のばね定数
+        """
         dot_q = sympy.Matrix([self.dot_q]).T
         c = self.calc_c()
         cq = self.calc_cq()
@@ -127,7 +160,13 @@ class Simulator:
         gamma += -beta*beta*c
         return gamma
 
-    def calc_dotdotq(self, alpha, beta) -> sympy.Matrix:
+    def calc_dotdotq(self, alpha: float = 10, beta: float = 10) -> sympy.Matrix:
+        """
+        状態変数の2回微分の解析解を計算するメソッド
+
+        alpha: バウムガルテの安定化法の減衰係数
+        beta: バウムガルテの安定化法のばね定数
+        """
         n_body = len(self.__bodies)
         n_constrain = len(self.__constrains)
         cq = self.calc_cq()
@@ -135,36 +174,55 @@ class Simulator:
         gamma = self.calc_gamma(alpha, beta)
         mass = self.calc_mass()
 
+        # 連立方程式の構築．mat_left * {dotdot_q, lambdas} = mat_right
         mat_left = sympy.BlockMatrix(
             [[mass, cq.T], [cq, sympy.ZeroMatrix(n_constrain, n_body*3)]])
         mat_left = sympy.Matrix(mat_left)
         mat_right = sympy.BlockMatrix([[force], [gamma]])
         mat_right = sympy.Matrix(mat_right)
 
+        # ラグランジュ変数を除いてqの2階微分のみを返す
         result = mat_left.inv()*mat_right
         return result[:n_body*3, :1]
 
     def simulation(
             self,
-            ts,
+            ts: np.ndarray,
             alpha: float = 10,
             beta: float = 10,
             parameters: List[Tuple[sympy.Symbol, float]] = None):
+        """
+        シミュレーションを実行するメソッド
+
+        ts: シミュレーションしたい時間のリスト
+        alpha: バウムガルテの安定化法の減衰係数
+        beta: バウムガルテの安定化法のばね定数
+        parameters: ユーザが独自定義した定数とその値のタプルのリスト
+        """
         n_body = len(self.__bodies)
+        # 求解する変数のシンボル
         q = self.q
         dot_q = self.dot_q
+
+        # dot_q(速度)の二階微分を表す行列(解析解)
         dotdotq = self.calc_dotdotq(alpha, beta)
+
+        # parametersへ質量などの値を追加する
         if parameters is None:
             parameters = []
         parameters += self.get_body_parameters()
 
+        # 定数を代入し，あとは変数q, dot_qを計算すれば良い状態にする
         dotdotq = dotdotq.subs(parameters)
-        x0 = np.r_[self.get_initial_position(), self.get_initial_velocity()]
 
+        # Cにコンパイルできるように変数名を変更する
         original_variables = q + dot_q
         new_variables = [sympy.symbols("x%d" % i)
                          for i in range(len(original_variables))]
         dotdotq = dotdotq.subs(list(zip(original_variables, new_variables))),
+
+        # Cへコンパイル
+        # TODO: CodeGenArgumentListErrorの対処
         from sympy.utilities.autowrap import autowrap
         calc_dotdotq = autowrap(
             dotdotq,
@@ -172,9 +230,13 @@ class Simulator:
             language="C", backend="cython")
 
         def dxdt(x, t):
+            """
+            時刻t，状態変数がxのときのxの時間微分を返す関数
+            """
             vel = x[n_body*3:]
             d_vel = calc_dotdotq(*x).reshape(3*n_body)
 
             return np.r_[vel, d_vel.astype(np.float)]
 
+        x0 = np.r_[self.get_initial_position(), self.get_initial_velocity()]
         return odeint(dxdt, x0, ts)
