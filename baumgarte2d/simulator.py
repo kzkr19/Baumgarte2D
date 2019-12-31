@@ -209,9 +209,11 @@ class Simulator:
         gamma += -beta*beta*c
         return gamma
 
-    def calc_dotdotq(self, alpha: float = 10, beta: float = 10) -> sympy.Matrix:
+    def calc_dotdotq_equation(self, alpha: float = 10, beta: float = 10) -> sympy.Matrix:
         """
-        状態変数の2回微分の解析解を計算するメソッド
+        状態変数の2回微分を計算する連立方程式
+        mat_left * {dotdot_q, lambdas} = mat_right
+        の行列mat_left, mat_rightの解析解を計算するメソッド
 
         alpha: バウムガルテの安定化法の減衰係数
         beta: バウムガルテの安定化法のばね定数
@@ -230,9 +232,7 @@ class Simulator:
         mat_right = sympy.BlockMatrix([[force], [gamma]])
         mat_right = sympy.Matrix(mat_right)
 
-        # ラグランジュ変数を除いてqの2階微分のみを返す
-        result = mat_left.inv()*mat_right
-        return result[:n_body*3, :1]
+        return mat_left, mat_right
 
     def simulation(
             self,
@@ -252,10 +252,11 @@ class Simulator:
         # 求解する変数のシンボル
         q = self.q
         dot_q = self.dot_q
+        t = sympy.symbols("t")
 
         # dot_q(速度)の二階微分を表す行列(解析解)
         print("calculating analytical solution...")
-        dotdotq = self.calc_dotdotq(alpha, beta)
+        mat_left, mat_right = self.calc_dotdotq_equation(alpha, beta)
 
         # parametersへ質量などの値を追加する
         if parameters is None:
@@ -263,21 +264,28 @@ class Simulator:
         parameters += self.get_body_parameters()
 
         # 定数を代入し，あとは変数q, dot_qを計算すれば良い状態にする
-        dotdotq = dotdotq.subs(parameters)
+        mat_left = mat_left.subs(parameters)
+        mat_right = mat_right.subs(parameters)
 
         # Cにコンパイルできるように変数名を変更する
         print("compiling code...")
         original_variables = q + dot_q
         new_variables = [sympy.symbols("x%d" % i)
                          for i in range(len(original_variables))]
-        dotdotq = dotdotq.subs(list(zip(original_variables, new_variables))),
+        var_names = list(zip(original_variables, new_variables))
+        mat_left = mat_left.subs(var_names)
+        mat_right = mat_right.subs(var_names)
 
         # Cへコンパイル
         # TODO: CodeGenArgumentListErrorの対処
         from sympy.utilities.autowrap import autowrap
-        calc_dotdotq = autowrap(
-            dotdotq,
-            args=new_variables,
+        calc_mat_left = autowrap(
+            mat_left,
+            args=[t] + new_variables,
+            language="C", backend="cython")
+        calc_mat_right = autowrap(
+            mat_right,
+            args=[t] + new_variables,
             language="C", backend="cython")
 
         print("calculating numerical solution...")
@@ -287,7 +295,9 @@ class Simulator:
             時刻t，状態変数がxのときのxの時間微分を返す関数
             """
             vel = x[n_body*3:]
-            d_vel = calc_dotdotq(*x).reshape(3*n_body)
+            mat_left = calc_mat_left(t, *x)
+            mat_right = calc_mat_right(t, *x)[:, 0]
+            d_vel = np.linalg.solve(mat_left, mat_right)[:n_body*3]
 
             return np.r_[vel, d_vel.astype(np.float)]
 
