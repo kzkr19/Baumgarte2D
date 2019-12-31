@@ -253,6 +253,7 @@ class Simulator:
         dot_q = self.dot_q
 
         # dot_q(速度)の二階微分を表す行列(解析解)
+        print("calculating analytical solution...")
         dotdotq = self.calc_dotdotq(alpha, beta)
 
         # parametersへ質量などの値を追加する
@@ -264,6 +265,7 @@ class Simulator:
         dotdotq = dotdotq.subs(parameters)
 
         # Cにコンパイルできるように変数名を変更する
+        print("compiling code...")
         original_variables = q + dot_q
         new_variables = [sympy.symbols("x%d" % i)
                          for i in range(len(original_variables))]
@@ -276,6 +278,8 @@ class Simulator:
             dotdotq,
             args=new_variables,
             language="C", backend="cython")
+
+        print("calculating numerical solution...")
 
         def dxdt(x, t):
             """
