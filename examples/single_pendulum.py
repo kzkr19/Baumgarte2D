@@ -33,7 +33,7 @@ def main():
     )
 
     # シミュレーション時間を設定しシミュレーション
-    ts = np.linspace(0, 10, num=100)
+    ts = np.linspace(0, 10, num=500)
     xs = simulator.simulation(ts, 10, 10, [(l, 1), (g, 9.8), (c, 0.0), (k, 0)])
 
     # プロット
