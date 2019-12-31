@@ -85,6 +85,7 @@ class Simulator:
                 b2.add_torque(-torque)
 
         # バネの追加
+        # TODO: 45度を中心としてトルクばねを設定したい場合
         if spring is not None:
             torque = -delta_theta*spring
             b1.add_torque(torque)
