@@ -139,6 +139,19 @@ class RigidBody:
         else:
             return self.rotation_matrix(False)*(point0 - self.position)
 
+    def convert_vector(self, vector: sympy.Matrix, to_global=True) -> sympy.Matrix:
+        """
+        to_globalがTrueならローカル座標系のベクトルをグローバル座標系のベクトルにするメソッド
+        Falseならグローバル座標系のベクトルをローカル座標系のベクトルに変換する
+
+        vector: 変換対象の点
+        to_global: Trueならpoint0をグローバル座標へ，Falseならローカル座標系へ変換する
+        """
+        if isinstance(vector, sympy.Matrix) == False:
+            raise RuntimeError("point0 must be instance of sympy.Matrix.")
+
+        return self.rotation_matrix(to_global)*vector
+
     def rotation_matrix(self, local_to_global=True):
         """
         回転行列を返すメソッド
