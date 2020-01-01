@@ -1,7 +1,10 @@
 import numpy as np
 import sympy
 from copy import deepcopy
-from typing import Tuple, List
+from typing import Tuple, List, Union
+from matplotlib.axes import Axes
+from typeguard import check_type
+from .core import *
 
 
 class RigidBody:
@@ -34,6 +37,10 @@ class RigidBody:
         self.__initial_velocity: np.ndarray = np.zeros(3)
         self.__mass: float = 1.0
         self.__moment_of_inertia: float = 1.0
+
+        # 描画時の大きさ
+        self.__width: float = 1.0
+        self.__height: float = 1.0
 
     @property
     def x(self) -> sympy.Symbol:
@@ -110,6 +117,24 @@ class RigidBody:
     def mass(self, other: float):
         self.__mass = other
 
+    @property
+    def width(self):
+        return self.__width
+
+    @width.setter
+    def width(self, val: Number):
+        check_type("width", val, Number)
+        self.__width = val
+
+    @property
+    def height(self):
+        return self.__height
+
+    @height.setter
+    def height(self, val: Number):
+        check_type("height", val, Number)
+        self.__height = val
+
     def get_parameters(self) -> List[Tuple[sympy.Symbol, float]]:
         return [(self.J, self.moment_of_inertia), (self.m, self.mass)]
 
@@ -166,3 +191,6 @@ class RigidBody:
         ])
 
         return rot if local_to_global else rot.T
+
+    def draw(self, ax: Axes, x: float, y: float, theta: float):
+        pass
