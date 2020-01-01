@@ -97,6 +97,46 @@ class Simulator:
         self.add_constrain(constrain[0])
         self.add_constrain(constrain[1])
 
+    def add_slide_constrain(
+        self,
+        v1: Tuple[sympy.Expr, sympy.Expr],
+        p1: Tuple[sympy.Expr, sympy.Expr],
+        b1: RigidBody,
+        v2: Tuple[sympy.Expr, sympy.Expr],
+        p2: Tuple[sympy.Expr, sympy.Expr],
+        b2: RigidBody = None,
+    ):
+        """
+        d=(p1-p2)とv1，v1とv2を並行にする並進拘束を追加するメソッド
+
+        v1: 剛体b1のローカル座標系で定義されたベクトル
+        p1: 剛体b1のローカル座標系の点
+        b1: 剛体b1のRigidBodyオブジェクト
+        v2: 剛体b2のローカル座標系で定義されたベクトル．b2=Noneの場合グローバル座標系となる
+        p2: 剛体b2のローカル座標系の点．b2=Noneの場合グローバル座標系となる
+        b2: 剛体b2．Noneの場合はp2, v2がグローバル座標系の点となる
+        """
+        v1 = sympy.Matrix([v1]).T
+        v2 = sympy.Matrix([v2]).T
+        p1 = sympy.Matrix([p1]).T
+        p2 = sympy.Matrix([p2]).T
+
+        # グローバル座標へ変換
+        v1 = b1.convert_vector(v1)
+        v2 = v2 if b2 is None else b2.convert_vector(v2)
+        p1 = b1.convert_point(p1)
+        p2 = p2 if b2 is None else b2.convert_vector(p2)
+        d = p1-p2
+
+        rot_90 = sympy.Matrix([[0, -1], [1, 0]])
+        vertical_v1 = rot_90*v1
+
+        constrain_1 = vertical_v1.T * d
+        constrain_2 = vertical_v1.T * v2
+
+        self.add_constrain(constrain_1[0])
+        self.add_constrain(constrain_2[0])
+
     def get_body_parameters(self) -> List[Tuple[sympy.Symbol, float]]:
         """
         追加された剛体の定数の値を取得するメソッド
