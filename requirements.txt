@@ -1,0 +1,7 @@
+sympy
+matplotlib
+tqdm
+scipy
+numpy
+typeguard
+cython
