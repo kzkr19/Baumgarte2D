@@ -366,28 +366,31 @@ class Simulator:
         xlims, ylims = [], []
 
         for i, body in enumerate(self.__bodies):
-            x, y, theta = xs[:,i*3+0], xs[:,i*3+1], xs[:,i*3+2]
-            xlim, ylim = body.calc_xylim(x,y,theta)
+            x, y, theta = xs[:, i*3+0], xs[:, i*3+1], xs[:, i*3+2]
+            xlim, ylim = body.calc_xylim(x, y, theta)
             xlims.append(xlim)
             ylims.append(ylim)
-        
+
         xmin = np.min([v[0] for v in xlims])
         xmax = np.max([v[1] for v in xlims])
         ymin = np.min([v[0] for v in ylims])
         ymax = np.max([v[1] for v in ylims])
 
-        return ((xmin,xmax),(ymin,ymax))
+        return ((xmin, xmax), (ymin, ymax))
 
     def draw_all(
             self,
+            ts: np.ndarray,
             xs: np.ndarray,
-            step_per_frame:int = 1,
+            step_per_frame: int = 1,
             xlim: Tuple[Number, Number] = None,
-            ylim: Tuple[Number,Number] = None,
-            save_format: str="%d.png"):
+            ylim: Tuple[Number, Number] = None,
+            save_format: str = "%d.png",
+            title_format: str = "% 3.1f s"):
         """
         剛体を描画するメソッド
 
+        ts: シミュレーション時間ステップ
         xs:
             シミュレーション結果
             xs[i,j*3+0]が時刻ts[i]のときのbody jのx座標
@@ -397,22 +400,26 @@ class Simulator:
         ylim:
         save_format:
             ファイル名のフォーマット("%04d.png"など)
+        title_format:
+            タイトルのフォーマット("% 3.1f s"など)
         """
         mask = np.arange(0, len(xs), step_per_frame)
+        ts = ts[mask]
         xs = xs[mask]
 
         xlim, ylim = self.calc_xylim(xs)
 
         plt.figure()
-        for i,x in enumerate(xs):
-            plt.clf()
-            axe = plt.axes()
+        axe: Axes = plt.axes()
+        for i, x in enumerate(xs):
+            axe.cla()
+            axe.set_title(title_format % ts[i])
+            axe.set_xlim(xlim)
+            axe.set_ylim(ylim)
             self.draw_frame(axe, x)
-            plt.xlim(xlim)
-            plt.ylim(ylim)
             plt.savefig(save_format % i)
 
-    def draw_frame(self,axe: Axes, xs: np.ndarray):
+    def draw_frame(self, axe: Axes, xs: np.ndarray):
         """
         1フレームだけ剛体の状態を描画するメソッド
 
@@ -425,4 +432,4 @@ class Simulator:
         """
         for i in range(len(self.__bodies)):
             body = self.__bodies[i]
-            body.draw(axe,xs[3*i+0], xs[3*i+1], xs[3*i+2])
+            body.draw(axe, xs[3*i+0], xs[3*i+1], xs[3*i+2])
