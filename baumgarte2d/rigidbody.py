@@ -3,6 +3,7 @@ import sympy
 from copy import deepcopy
 from typing import Tuple, List, Union
 from matplotlib.axes import Axes
+from matplotlib.patches import Polygon
 from typeguard import check_type
 from .core import *
 
@@ -41,6 +42,7 @@ class RigidBody:
         # 描画時の大きさ
         self.__width: float = 1.0
         self.__height: float = 1.0
+        self.__center_rect: Tuple[Number, Number] = (0, 0)
 
     @property
     def x(self) -> sympy.Symbol:
@@ -121,6 +123,15 @@ class RigidBody:
     def width(self):
         return self.__width
 
+    @property
+    def center_of_rectangle(self) -> Tuple[Number, Number]:
+        return self.__center_rect
+
+    @center_of_rectangle.setter
+    def center_of_rectangle(self, other: Tuple[Number, Number]):
+        check_type("center_of_rectangle", other, Tuple[Number, Number])
+        self.__center_rect = other
+
     @width.setter
     def width(self, val: Number):
         check_type("width", val, Number)
@@ -193,4 +204,25 @@ class RigidBody:
         return rot if local_to_global else rot.T
 
     def draw(self, ax: Axes, x: float, y: float, theta: float):
-        pass
+        """
+        x: 重心座標[m]
+        y: 重心座標[m]
+        theta: 回転角度[rad]
+        """
+        dx, dy = self.center_of_rectangle
+        w2, h2 = self.width/2, self.height/2
+
+        # ローカル座標系での箱の4つの座標
+        points_l = [(dx-w2, dy-h2), (dx+w2, dy-h2),
+                    (dx+w2, dy+h2), (dx-w2, dy+h2)]
+
+        # グローバル座標へ変換
+        points_g = []
+        mat = self.rotation_matrix().subs([(self.theta, theta)])
+        mat = sympy.matrix2numpy(mat)
+        for p_l in points_l:
+            p_g = mat.dot(p_l) + [x, y]
+            points_g.append((p_g[0], p_g[1]))
+
+        p = Polygon(points_g, color="black")
+        ax.add_patch(p)
