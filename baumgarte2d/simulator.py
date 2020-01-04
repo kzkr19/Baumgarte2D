@@ -262,7 +262,6 @@ class Simulator:
         alpha: バウムガルテの安定化法の減衰係数
         beta: バウムガルテの安定化法のばね定数
         """
-        n_body = len(self.__bodies)
         n_constrain = len(self.__constrains)
         cq = self.calc_cq()
         force = self.calc_force()
