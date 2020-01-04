@@ -192,7 +192,7 @@ class RigidBody:
         """
         回転行列を返すメソッド
 
-        local_to_global: 
+        local_to_global:
             Trueならこのオブジェクトのローカル座標のベクトルをグローバル座標のベクトルに
             Falseならその逆行列を返すメソッド
         """
@@ -203,26 +203,47 @@ class RigidBody:
 
         return rot if local_to_global else rot.T
 
+    def calc_points_local(self) -> List[Tuple[Number, Number]]:
+        """
+        ローカル座標系での四角形の4頂点の座標を返すメソッド
+        """
+        dx, dy = self.center_of_rectangle
+        w2, h2 = self.width/2, self.height/2
+
+        points_l = [(dx-w2, dy-h2), (dx+w2, dy-h2),
+                    (dx+w2, dy+h2), (dx-w2, dy+h2)]
+
+        return points_l
+
+    def calc_points_global(self, x: float, y: float, theta: float) -> List[(float, float)]:
+        """
+        グローバル座標系での四角形の4頂点の座標を返すメソッド
+
+        x: 現在の重心のx座標
+        y: 現在の重心のy座標
+        theta: 現在の剛体の角度[rad]
+        """
+        check_type("x", x, float)
+        check_type("y", y, float)
+        check_type("theta", theta, float)
+
+        points_l = self.calc_points_local()
+
+        c = np.cos(theta)
+        s = np.sin(theta)
+        ret = []
+        for p in points_l:
+            xx = x + c * p[0] - s * p[1]
+            yy = y + s * p[0] + c * p[1]
+            ret.append((xx, yy))
+        return ret
+
     def draw(self, ax: Axes, x: float, y: float, theta: float):
         """
         x: 重心座標[m]
         y: 重心座標[m]
         theta: 回転角度[rad]
         """
-        dx, dy = self.center_of_rectangle
-        w2, h2 = self.width/2, self.height/2
-
-        # ローカル座標系での箱の4つの座標
-        points_l = [(dx-w2, dy-h2), (dx+w2, dy-h2),
-                    (dx+w2, dy+h2), (dx-w2, dy+h2)]
-
-        # グローバル座標へ変換
-        points_g = []
-        mat = self.rotation_matrix().subs([(self.theta, theta)])
-        mat = sympy.matrix2numpy(mat)
-        for p_l in points_l:
-            p_g = mat.dot(p_l) + [x, y]
-            points_g.append((p_g[0], p_g[1]))
-
+        points_g = self.calc_points_global(x, y, theta)
         p = Polygon(points_g, color="black")
         ax.add_patch(p)
