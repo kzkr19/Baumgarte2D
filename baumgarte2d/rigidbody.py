@@ -248,6 +248,38 @@ class RigidBody:
             ret.append((xx, yy))
         return ret
 
+    def calc_xylim(
+            self,
+            xs: np.ndarray,
+            ys: np.ndarray,
+            thetas: np.ndarray) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        """
+        描画したときのx，y方向の最端部の座標を取得するメソッド
+        
+        xs: 現在の重心のx座標のリスト
+        ys: 現在の重心のy座標のリスト
+        thetas: 現在の剛体の角度[rad]のリスト
+        返り値：((xmin,xmax), (ymin, ymax))
+        """
+        check_type("xs", xs, np.ndarray)
+        check_type("ys", ys, np.ndarray)
+        check_type("thetas", thetas, np.ndarray)
+
+        xmin, xmax, ymin, ymax = None, None, None, None
+        for x, y, theta in zip(xs, ys, thetas):
+            points = self.calc_points_global(x, y, theta)
+            x_list = [p[0] for p in points]
+            y_list = [p[1] for p in points]
+            if xmin is not None:
+                x_list += [xmin,xmax]
+                y_list += [ymin,ymax]
+            xmin = np.min(x_list)
+            xmax = np.max(x_list)
+            ymin = np.min(y_list)
+            ymax = np.max(y_list)
+
+        return ((xmin, xmax), (ymin, ymax))
+
     def draw(self, ax: Axes, x: float, y: float, theta: float):
         """
         x: 重心座標[m]
