@@ -2,8 +2,11 @@ import numpy as np
 import sympy
 from typing import Tuple, Union, List
 from .rigidbody import RigidBody
+from .core import *
 from functools import reduce
 from scipy.integrate import odeint
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 
 
 class Simulator:
@@ -287,7 +290,15 @@ class Simulator:
         alpha: バウムガルテの安定化法の減衰係数
         beta: バウムガルテの安定化法のばね定数
         parameters: ユーザが独自定義した定数とその値のタプルのリスト
+
+        返り値
+        xs:
+            シミュレーション結果
+            xs[i,j*3+0]が時刻ts[i]のときのbody jのx座標
+            xs[i,j*3+1]が時刻ts[i]のときのbody jのy座標
+            xs[i,j*3+2]が時刻ts[i]のときのbody jの角度
         """
+        # TODO: リファクタして関数の行数を減らしたい
         n_body = len(self.__bodies)
         # 求解する変数のシンボル
         q = self.q
@@ -343,3 +354,75 @@ class Simulator:
 
         x0 = np.r_[self.get_initial_position(), self.get_initial_velocity()]
         return odeint(dxdt, x0, ts)
+
+    def calc_xylim(self, xs: np.ndarray):
+        """
+        xs:
+            シミュレーション結果
+            xs[i,j*3+0]が時刻ts[i]のときのbody jのx座標
+            xs[i,j*3+1]が時刻ts[i]のときのbody jのy座標
+            xs[i,j*3+2]が時刻ts[i]のときのbody jの角度
+        """
+        xlims, ylims = [], []
+
+        for i, body in enumerate(self.__bodies):
+            x, y, theta = xs[:,i*3+0], xs[:,i*3+1], xs[:,i*3+2]
+            xlim, ylim = body.calc_xylim(x,y,theta)
+            xlims.append(xlim)
+            ylims.append(ylim)
+        
+        xmin = np.min([v[0] for v in xlims])
+        xmax = np.max([v[1] for v in xlims])
+        ymin = np.min([v[0] for v in ylims])
+        ymax = np.max([v[1] for v in ylims])
+
+        return ((xmin,xmax),(ymin,ymax))
+
+    def draw_all(
+            self,
+            xs: np.ndarray,
+            step_per_frame:int = 1,
+            xlim: Tuple[Number, Number] = None,
+            ylim: Tuple[Number,Number] = None,
+            save_format: str="%d.png"):
+        """
+        剛体を描画するメソッド
+
+        xs:
+            シミュレーション結果
+            xs[i,j*3+0]が時刻ts[i]のときのbody jのx座標
+            xs[i,j*3+1]が時刻ts[i]のときのbody jのy座標
+            xs[i,j*3+2]が時刻ts[i]のときのbody jの角度
+        xlim:
+        ylim:
+        save_format:
+            ファイル名のフォーマット("%04d.png"など)
+        """
+        mask = np.arange(0, len(xs), step_per_frame)
+        xs = xs[mask]
+
+        xlim, ylim = self.calc_xylim(xs)
+
+        plt.figure()
+        for i,x in enumerate(xs):
+            plt.clf()
+            axe = plt.axes()
+            self.draw_frame(axe, x)
+            plt.xlim(xlim)
+            plt.ylim(ylim)
+            plt.savefig(save_format % i)
+
+    def draw_frame(self,axe: Axes, xs: np.ndarray):
+        """
+        1フレームだけ剛体の状態を描画するメソッド
+
+        axe: 描画先のグラフのAxeインスタンス
+        xs:
+            シミュレーション結果
+            xs[j*3+0]がbody jのx座標
+            xs[j*3+1]がbody jのy座標
+            xs[j*3+2]がbody jの角度
+        """
+        for i in range(len(self.__bodies)):
+            body = self.__bodies[i]
+            body.draw(axe,xs[3*i+0], xs[3*i+1], xs[3*i+2])
