@@ -39,10 +39,11 @@ class RigidBody:
         self.__mass: float = 1.0
         self.__moment_of_inertia: float = 1.0
 
-        # 描画時の大きさ
+        # 描画の設定
         self.__width: float = 1.0
         self.__height: float = 1.0
         self.__center_rect: Tuple[Number, Number] = (0, 0)
+        self.__color: str = "black"
 
     @property
     def x(self) -> sympy.Symbol:
@@ -146,6 +147,15 @@ class RigidBody:
         check_type("height", val, Number)
         self.__height = val
 
+    @property
+    def color(self) -> str:
+        return self.__color
+
+    @color.setter
+    def color(self, other: str):
+        check_type("color", other, str)
+        self.__color = other
+
     def get_parameters(self) -> List[Tuple[sympy.Symbol, float]]:
         return [(self.J, self.moment_of_inertia), (self.m, self.mass)]
 
@@ -215,7 +225,7 @@ class RigidBody:
 
         return points_l
 
-    def calc_points_global(self, x: float, y: float, theta: float) -> List[(float, float)]:
+    def calc_points_global(self, x: float, y: float, theta: float) -> List[Tuple[float, float]]:
         """
         グローバル座標系での四角形の4頂点の座標を返すメソッド
 
@@ -245,5 +255,5 @@ class RigidBody:
         theta: 回転角度[rad]
         """
         points_g = self.calc_points_global(x, y, theta)
-        p = Polygon(points_g, color="black")
+        p = Polygon(points_g, color=self.color)
         ax.add_patch(p)
