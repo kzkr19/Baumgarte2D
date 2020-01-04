@@ -7,6 +7,7 @@ from functools import reduce
 from scipy.integrate import odeint
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
+from tqdm import tqdm
 
 
 class Simulator:
@@ -270,7 +271,7 @@ class Simulator:
 
         # 連立方程式の構築．mat_left * {dotdot_q, lambdas} = mat_right
         mat_left = sympy.BlockMatrix(
-            [[mass, cq.T], [cq, sympy.ZeroMatrix(n_constrain, n_body*3)]])
+            [[mass, cq.T], [cq, sympy.ZeroMatrix(n_constrain, n_constrain)]])
         mat_left = sympy.Matrix(mat_left)
         mat_right = sympy.BlockMatrix([[force], [gamma]])
         mat_right = sympy.Matrix(mat_right)
@@ -403,6 +404,7 @@ class Simulator:
         title_format:
             タイトルのフォーマット("% 3.1f s"など)
         """
+        print("drawing rigidbody...")
         mask = np.arange(0, len(xs), step_per_frame)
         ts = ts[mask]
         xs = xs[mask]
@@ -411,13 +413,15 @@ class Simulator:
 
         plt.figure()
         axe: Axes = plt.axes()
-        for i, x in enumerate(xs):
-            axe.cla()
-            axe.set_title(title_format % ts[i])
-            axe.set_xlim(xlim)
-            axe.set_ylim(ylim)
-            self.draw_frame(axe, x)
-            plt.savefig(save_format % i)
+        with tqdm(total=len(xs)) as pbar:
+            for i, x in enumerate(xs):
+                pbar.update(1)
+                axe.cla()
+                axe.set_title(title_format % ts[i])
+                axe.set_xlim(xlim)
+                axe.set_ylim(ylim)
+                self.draw_frame(axe, x)
+                plt.savefig(save_format % i)
 
     def draw_frame(self, axe: Axes, xs: np.ndarray):
         """
