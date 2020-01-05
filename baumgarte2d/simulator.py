@@ -408,7 +408,11 @@ class Simulator:
         ts = ts[mask]
         xs = xs[mask]
 
-        xlim, ylim = self.calc_xylim(xs)
+        xlim_, ylim_ = self.calc_xylim(xs)
+        if xlim is None:
+            xlim = xlim_
+        if ylim is None:
+            ylim = ylim_
 
         plt.figure()
         axe: Axes = plt.axes()
