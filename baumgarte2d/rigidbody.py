@@ -1,7 +1,11 @@
 import numpy as np
 import sympy
 from copy import deepcopy
-from typing import Tuple, List
+from typing import Tuple, List, Union
+from matplotlib.axes import Axes
+from matplotlib.patches import Polygon
+from typeguard import check_type
+from .core import *
 
 
 class RigidBody:
@@ -34,6 +38,12 @@ class RigidBody:
         self.__initial_velocity: np.ndarray = np.zeros(3)
         self.__mass: float = 1.0
         self.__moment_of_inertia: float = 1.0
+
+        # 描画の設定
+        self.__width: float = 1.0
+        self.__height: float = 1.0
+        self.__center_rect: Tuple[Number, Number] = (0, 0)
+        self.__color: str = "black"
 
     @property
     def x(self) -> sympy.Symbol:
@@ -110,6 +120,42 @@ class RigidBody:
     def mass(self, other: float):
         self.__mass = other
 
+    @property
+    def width(self):
+        return self.__width
+
+    @property
+    def center_of_rectangle(self) -> Tuple[Number, Number]:
+        return self.__center_rect
+
+    @center_of_rectangle.setter
+    def center_of_rectangle(self, other: Tuple[Number, Number]):
+        check_type("center_of_rectangle", other, Tuple[Number, Number])
+        self.__center_rect = other
+
+    @width.setter
+    def width(self, val: Number):
+        check_type("width", val, Number)
+        self.__width = val
+
+    @property
+    def height(self):
+        return self.__height
+
+    @height.setter
+    def height(self, val: Number):
+        check_type("height", val, Number)
+        self.__height = val
+
+    @property
+    def color(self) -> str:
+        return self.__color
+
+    @color.setter
+    def color(self, other: str):
+        check_type("color", other, str)
+        self.__color = other
+
     def get_parameters(self) -> List[Tuple[sympy.Symbol, float]]:
         return [(self.J, self.moment_of_inertia), (self.m, self.mass)]
 
@@ -139,11 +185,24 @@ class RigidBody:
         else:
             return self.rotation_matrix(False)*(point0 - self.position)
 
+    def convert_vector(self, vector: sympy.Matrix, to_global=True) -> sympy.Matrix:
+        """
+        to_globalがTrueならローカル座標系のベクトルをグローバル座標系のベクトルにするメソッド
+        Falseならグローバル座標系のベクトルをローカル座標系のベクトルに変換する
+
+        vector: 変換対象の点
+        to_global: Trueならpoint0をグローバル座標へ，Falseならローカル座標系へ変換する
+        """
+        if isinstance(vector, sympy.Matrix) == False:
+            raise RuntimeError("point0 must be instance of sympy.Matrix.")
+
+        return self.rotation_matrix(to_global)*vector
+
     def rotation_matrix(self, local_to_global=True):
         """
         回転行列を返すメソッド
 
-        local_to_global: 
+        local_to_global:
             Trueならこのオブジェクトのローカル座標のベクトルをグローバル座標のベクトルに
             Falseならその逆行列を返すメソッド
         """
@@ -153,3 +212,80 @@ class RigidBody:
         ])
 
         return rot if local_to_global else rot.T
+
+    def calc_points_local(self) -> List[Tuple[Number, Number]]:
+        """
+        ローカル座標系での四角形の4頂点の座標を返すメソッド
+        """
+        dx, dy = self.center_of_rectangle
+        w2, h2 = self.width/2, self.height/2
+
+        points_l = [(dx-w2, dy-h2), (dx+w2, dy-h2),
+                    (dx+w2, dy+h2), (dx-w2, dy+h2)]
+
+        return points_l
+
+    def calc_points_global(self, x: float, y: float, theta: float) -> List[Tuple[float, float]]:
+        """
+        グローバル座標系での四角形の4頂点の座標を返すメソッド
+
+        x: 現在の重心のx座標
+        y: 現在の重心のy座標
+        theta: 現在の剛体の角度[rad]
+        """
+        check_type("x", x, float)
+        check_type("y", y, float)
+        check_type("theta", theta, float)
+
+        points_l = self.calc_points_local()
+
+        c = np.cos(theta)
+        s = np.sin(theta)
+        ret = []
+        for p in points_l:
+            xx = x + c * p[0] - s * p[1]
+            yy = y + s * p[0] + c * p[1]
+            ret.append((xx, yy))
+        return ret
+
+    def calc_xylim(
+            self,
+            xs: np.ndarray,
+            ys: np.ndarray,
+            thetas: np.ndarray) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        """
+        描画したときのx，y方向の最端部の座標を取得するメソッド
+        
+        xs: 現在の重心のx座標のリスト
+        ys: 現在の重心のy座標のリスト
+        thetas: 現在の剛体の角度[rad]のリスト
+        返り値：((xmin,xmax), (ymin, ymax))
+        """
+        check_type("xs", xs, np.ndarray)
+        check_type("ys", ys, np.ndarray)
+        check_type("thetas", thetas, np.ndarray)
+
+        xmin, xmax, ymin, ymax = None, None, None, None
+        for x, y, theta in zip(xs, ys, thetas):
+            points = self.calc_points_global(x, y, theta)
+            x_list = [p[0] for p in points]
+            y_list = [p[1] for p in points]
+            if xmin is not None:
+                x_list += [xmin,xmax]
+                y_list += [ymin,ymax]
+            xmin = np.min(x_list)
+            xmax = np.max(x_list)
+            ymin = np.min(y_list)
+            ymax = np.max(y_list)
+
+        return ((xmin, xmax), (ymin, ymax))
+
+    def draw(self, ax: Axes, x: float, y: float, theta: float):
+        """
+        x: 重心座標[m]
+        y: 重心座標[m]
+        theta: 回転角度[rad]
+        """
+        points_g = self.calc_points_global(x, y, theta)
+        p = Polygon(points_g, color=self.color)
+        ax.add_patch(p)

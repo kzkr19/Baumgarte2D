@@ -2,13 +2,16 @@ import baumgarte2d
 from sympy import symbols, sin
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+
+IMAGE_FILE_PATH: str = "./examples/temp"
 
 
 def main():
     a = 0.1
     l = 1.0
     g = 9.8
-    c = 0.5
+    c = 4.0
     # 振動の角速度がsqrt(2*g*l)/aより大きければ安定する
     # https://en.wikipedia.org/wiki/Kapitza%27s_pendulum
     nu = 2*np.sqrt(2*g*l)/a
@@ -16,6 +19,10 @@ def main():
 
     # 剛体の定義
     block = baumgarte2d.RigidBody(0)
+
+    # 描画の設定
+    block.width = 2*l
+    block.height = block.width / 10.0
 
     # 重力の追加
     block.add_force_y(0-block.m*g)
@@ -37,9 +44,9 @@ def main():
     )
 
     # シミュレーション時間を設定しシミュレーション
-    t_max = 20
+    t_max = 5
     dt = 2*np.pi/nu/20
-    ts = np.linspace(0, 10, num=int(t_max/dt))
+    ts = np.linspace(0, t_max, num=int(t_max/dt))
     xs = simulator.simulation(ts)
 
     # プロット
@@ -52,6 +59,12 @@ def main():
     plt.xlabel("$x$")
     plt.ylabel("$y$")
     plt.show()
+
+    # 描画
+    if not os.path.exists(IMAGE_FILE_PATH):
+        os.mkdir(IMAGE_FILE_PATH)
+    simulator.draw_all(
+        ts, xs, 4, xlim=[-3, +3], ylim=[-2, 2.5], save_format=IMAGE_FILE_PATH+"/%04d.png")
 
     print(simulator.calc_cq())
     print(simulator.calc_cqdotqq())

@@ -2,6 +2,9 @@ import baumgarte2d
 import sympy
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+
+IMAGE_FILE_PATH: str = "./examples/temp"
 
 
 def main():
@@ -19,6 +22,11 @@ def main():
     # 初期値の設定．順にx0, y0, theta0
     block.initial_position = np.array([1/np.sqrt(2), -1/np.sqrt(2), -np.pi/4])
 
+    # 描画の設定
+    block.width = 2.0
+    block.height = 0.02
+    block.color = "red"
+
     # シミュレーションする環境の構築
     simulator = baumgarte2d.Simulator()
 
@@ -34,18 +42,12 @@ def main():
 
     # シミュレーション時間を設定しシミュレーション
     ts = np.linspace(0, 10, num=500)
-    xs = simulator.simulation(ts, 10, 10, [(l, 1), (g, 9.8), (c, 0.0), (k, 0)])
+    xs = simulator.simulation(ts, 10, 10, [(l, 1), (g, 9.8), (c, 0.5), (k, 0)])
 
-    # プロット
-    plt.plot(ts, np.degrees(xs[:, 2]))
-    plt.xlabel("time")
-    plt.ylabel("$\\theta$")
-    plt.show()
-
-    plt.plot(xs[:, 0], xs[:, 1])
-    plt.xlabel("$x$")
-    plt.ylabel("$y$")
-    plt.show()
+    # 描画
+    if not os.path.exists(IMAGE_FILE_PATH):
+        os.mkdir(IMAGE_FILE_PATH)
+    simulator.draw_all(ts, xs, 10, save_format=IMAGE_FILE_PATH+"/%04d.png")
 
     print(simulator.calc_cq())
     print(simulator.calc_cqdotqq())

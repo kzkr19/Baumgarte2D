@@ -2,8 +2,12 @@ import numpy as np
 import sympy
 from typing import Tuple, Union, List
 from .rigidbody import RigidBody
+from .core import *
 from functools import reduce
 from scipy.integrate import odeint
+import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
+from tqdm import tqdm
 
 
 class Simulator:
@@ -96,6 +100,46 @@ class Simulator:
         constrain = p1 - p2
         self.add_constrain(constrain[0])
         self.add_constrain(constrain[1])
+
+    def add_slide_constrain(
+        self,
+        v1: Tuple[sympy.Expr, sympy.Expr],
+        p1: Tuple[sympy.Expr, sympy.Expr],
+        b1: RigidBody,
+        v2: Tuple[sympy.Expr, sympy.Expr],
+        p2: Tuple[sympy.Expr, sympy.Expr],
+        b2: RigidBody = None,
+    ):
+        """
+        d=(p1-p2)とv1，v1とv2を並行にする並進拘束を追加するメソッド
+
+        v1: 剛体b1のローカル座標系で定義されたベクトル
+        p1: 剛体b1のローカル座標系の点
+        b1: 剛体b1のRigidBodyオブジェクト
+        v2: 剛体b2のローカル座標系で定義されたベクトル．b2=Noneの場合グローバル座標系となる
+        p2: 剛体b2のローカル座標系の点．b2=Noneの場合グローバル座標系となる
+        b2: 剛体b2．Noneの場合はp2, v2がグローバル座標系の点となる
+        """
+        v1 = sympy.Matrix([v1]).T
+        v2 = sympy.Matrix([v2]).T
+        p1 = sympy.Matrix([p1]).T
+        p2 = sympy.Matrix([p2]).T
+
+        # グローバル座標へ変換
+        v1 = b1.convert_vector(v1)
+        v2 = v2 if b2 is None else b2.convert_vector(v2)
+        p1 = b1.convert_point(p1)
+        p2 = p2 if b2 is None else b2.convert_vector(p2)
+        d = p1-p2
+
+        rot_90 = sympy.Matrix([[0, -1], [1, 0]])
+        vertical_v1 = rot_90*v1
+
+        constrain_1 = vertical_v1.T * d
+        constrain_2 = vertical_v1.T * v2
+
+        self.add_constrain(constrain_1[0])
+        self.add_constrain(constrain_2[0])
 
     def get_body_parameters(self) -> List[Tuple[sympy.Symbol, float]]:
         """
@@ -218,7 +262,6 @@ class Simulator:
         alpha: バウムガルテの安定化法の減衰係数
         beta: バウムガルテの安定化法のばね定数
         """
-        n_body = len(self.__bodies)
         n_constrain = len(self.__constrains)
         cq = self.calc_cq()
         force = self.calc_force()
@@ -227,7 +270,7 @@ class Simulator:
 
         # 連立方程式の構築．mat_left * {dotdot_q, lambdas} = mat_right
         mat_left = sympy.BlockMatrix(
-            [[mass, cq.T], [cq, sympy.ZeroMatrix(n_constrain, n_body*3)]])
+            [[mass, cq.T], [cq, sympy.ZeroMatrix(n_constrain, n_constrain)]])
         mat_left = sympy.Matrix(mat_left)
         mat_right = sympy.BlockMatrix([[force], [gamma]])
         mat_right = sympy.Matrix(mat_right)
@@ -247,7 +290,15 @@ class Simulator:
         alpha: バウムガルテの安定化法の減衰係数
         beta: バウムガルテの安定化法のばね定数
         parameters: ユーザが独自定義した定数とその値のタプルのリスト
+
+        返り値
+        xs:
+            シミュレーション結果
+            xs[i,j*3+0]が時刻ts[i]のときのbody jのx座標
+            xs[i,j*3+1]が時刻ts[i]のときのbody jのy座標
+            xs[i,j*3+2]が時刻ts[i]のときのbody jの角度
         """
+        # TODO: リファクタして関数の行数を減らしたい
         n_body = len(self.__bodies)
         # 求解する変数のシンボル
         q = self.q
@@ -303,3 +354,89 @@ class Simulator:
 
         x0 = np.r_[self.get_initial_position(), self.get_initial_velocity()]
         return odeint(dxdt, x0, ts)
+
+    def calc_xylim(self, xs: np.ndarray):
+        """
+        xs:
+            シミュレーション結果
+            xs[i,j*3+0]が時刻ts[i]のときのbody jのx座標
+            xs[i,j*3+1]が時刻ts[i]のときのbody jのy座標
+            xs[i,j*3+2]が時刻ts[i]のときのbody jの角度
+        """
+        xlims, ylims = [], []
+
+        for i, body in enumerate(self.__bodies):
+            x, y, theta = xs[:, i*3+0], xs[:, i*3+1], xs[:, i*3+2]
+            xlim, ylim = body.calc_xylim(x, y, theta)
+            xlims.append(xlim)
+            ylims.append(ylim)
+
+        xmin = np.min([v[0] for v in xlims])
+        xmax = np.max([v[1] for v in xlims])
+        ymin = np.min([v[0] for v in ylims])
+        ymax = np.max([v[1] for v in ylims])
+
+        return ((xmin, xmax), (ymin, ymax))
+
+    def draw_all(
+            self,
+            ts: np.ndarray,
+            xs: np.ndarray,
+            step_per_frame: int = 1,
+            xlim: Tuple[Number, Number] = None,
+            ylim: Tuple[Number, Number] = None,
+            save_format: str = "%d.png",
+            title_format: str = "% 3.1f s"):
+        """
+        剛体を描画するメソッド
+
+        ts: シミュレーション時間ステップ
+        xs:
+            シミュレーション結果
+            xs[i,j*3+0]が時刻ts[i]のときのbody jのx座標
+            xs[i,j*3+1]が時刻ts[i]のときのbody jのy座標
+            xs[i,j*3+2]が時刻ts[i]のときのbody jの角度
+        xlim:
+        ylim:
+        save_format:
+            ファイル名のフォーマット("%04d.png"など)
+        title_format:
+            タイトルのフォーマット("% 3.1f s"など)
+        """
+        print("drawing rigidbody...")
+        mask = np.arange(0, len(xs), step_per_frame)
+        ts = ts[mask]
+        xs = xs[mask]
+
+        xlim_, ylim_ = self.calc_xylim(xs)
+        if xlim is None:
+            xlim = xlim_
+        if ylim is None:
+            ylim = ylim_
+
+        plt.figure()
+        axe: Axes = plt.axes()
+        with tqdm(total=len(xs)) as pbar:
+            for i, x in enumerate(xs):
+                pbar.update(1)
+                axe.cla()
+                axe.set_title(title_format % ts[i])
+                axe.set_xlim(xlim)
+                axe.set_ylim(ylim)
+                self.draw_frame(axe, x)
+                plt.savefig(save_format % i)
+
+    def draw_frame(self, axe: Axes, xs: np.ndarray):
+        """
+        1フレームだけ剛体の状態を描画するメソッド
+
+        axe: 描画先のグラフのAxeインスタンス
+        xs:
+            シミュレーション結果
+            xs[j*3+0]がbody jのx座標
+            xs[j*3+1]がbody jのy座標
+            xs[j*3+2]がbody jの角度
+        """
+        for i in range(len(self.__bodies)):
+            body = self.__bodies[i]
+            body.draw(axe, xs[3*i+0], xs[3*i+1], xs[3*i+2])
