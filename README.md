@@ -5,6 +5,6 @@ Physics engine by Baumgarte stabilization method
 ```bash
 git clone git@github.com:kzkr19/Baumgarte2D.git
 cd Baumgarte2D
-pip3 install -r requirements.txt
-python3 examples/double_pendulum.py
+pip install -r requirements.txt
+ipython examples/double_pendulum.py
 ```
