@@ -13,7 +13,7 @@ def main():
     # 記号・値の定義
     t = symbols("t")
     sym_ls = [symbols("l_%d" % i) for i in range(5)]
-    val_ls = [1.0, 3.0, 1.0, 1.0, 1.0]
+    val_ls = [0.5, 1.0, 1.0, 1.0, 1.0]
     sym_g, val_g = symbols("g"), 9.8
     sym_omega, val_omega = symbols("\\omega"), 20
     sym_cs = [symbols("c_%d" % i) for i in range(2)]
@@ -118,8 +118,8 @@ def main():
     if not os.path.exists(IMAGE_FILE_PATH):
         os.mkdir(IMAGE_FILE_PATH)
     simulator.draw_all(ts, xs, 1,
-                       xlim=(-12, +12),
-                       ylim=(-3, +15),
+                       xlim=(-8, +8),
+                       ylim=(-2, +10),
                        save_format=IMAGE_FILE_PATH+"/%04d.png")
 
 
