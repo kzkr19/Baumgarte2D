@@ -81,15 +81,9 @@ def main():
     # 剛体0の角度を運動拘束する
     simulator.add_constrain(blocks[0].theta-sym_omega*t)
     # 剛体2を並進拘束する
-    # simulator.add_slide_constrain(
-    #    (1, 0), (0, 0), blocks[2],
-    #    (0, 1), (0, 0), None
-    # )
-    simulator.add_constrain(
-        blocks[2].theta
-    )
-    simulator.add_constrain(
-        blocks[2].x
+    simulator.add_slide_constrain(
+        (0, 1), (0, sym_ls[2]), blocks[2],
+        (0, 1), (0, 0), None
     )
 
     # 行列を表示
