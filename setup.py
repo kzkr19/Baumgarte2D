@@ -10,6 +10,6 @@ setup(
     description='Simple physics engine.',
     long_description=readme,
     author='kzkr19',
-    url='https://gitlab.com/kazukuro19/Baumgarte2D',
+    url='https://github.com/kzkr19/Baumgarte2D',
     packages=find_packages(exclude=('tests', 'docs')),
 )
