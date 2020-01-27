@@ -282,7 +282,8 @@ class Simulator:
             ts: np.ndarray,
             alpha: float = 10,
             beta: float = 10,
-            parameters: List[Tuple[sympy.Symbol, float]] = None):
+            parameters: List[Tuple[sympy.Symbol, float]] = None,
+            return_force: bool = False):
         """
         シミュレーションを実行するメソッド
 
@@ -308,6 +309,7 @@ class Simulator:
         # dot_q(速度)の二階微分を表す行列(解析解)
         print("calculating analytical solution...")
         mat_left, mat_right = self.calc_dotdotq_equation(alpha, beta)
+        mat_cq = self.calc_cq()
 
         # parametersへ質量などの値を追加する
         if parameters is None:
@@ -317,6 +319,7 @@ class Simulator:
         # 定数を代入し，あとは変数q, dot_qを計算すれば良い状態にする
         mat_left = mat_left.subs(parameters)
         mat_right = mat_right.subs(parameters)
+        mat_cq = mat_cq.subs(parameters)
 
         # Cにコンパイルできるように変数名を変更する
         print("compiling code...")
@@ -326,6 +329,7 @@ class Simulator:
         var_names = list(zip(original_variables, new_variables))
         mat_left = mat_left.subs(var_names)
         mat_right = mat_right.subs(var_names)
+        mat_cq = mat_cq.subs(var_names)
 
         # Cへコンパイル
         # TODO: CodeGenArgumentListErrorの対処
@@ -336,6 +340,10 @@ class Simulator:
             language="C", backend="cython")
         calc_mat_right = autowrap(
             mat_right,
+            args=[t] + new_variables,
+            language="C", backend="cython")
+        calc_mat_cq = autowrap(
+            mat_cq,
             args=[t] + new_variables,
             language="C", backend="cython")
 
@@ -353,7 +361,21 @@ class Simulator:
             return np.r_[vel, d_vel.astype(np.float)]
 
         x0 = np.r_[self.get_initial_position(), self.get_initial_velocity()]
-        return odeint(dxdt, x0, ts)
+        xs = odeint(dxdt, x0, ts)
+
+        if return_force:
+            # 拘束力を計算する
+            forces = []
+            for t, x in zip(ts, xs):
+                mat_left = calc_mat_left(t, *x)
+                mat_right = calc_mat_right(t, *x)
+                cq = calc_mat_cq(t, *x)
+                lambdas = np.linalg.solve(mat_left, mat_right)[n_body*3:]
+                # 拘束力はCq^T.dot(lambdas)
+                forces.append(cq.T.dot(lambdas))
+            return xs, forces
+        else:
+            return xs
 
     def calc_xylim(self, xs: np.ndarray):
         """
